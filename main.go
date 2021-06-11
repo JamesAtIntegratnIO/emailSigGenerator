@@ -131,6 +131,7 @@ func renderTemplate(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/", renderTemplate)
+	log.Printf("Open your browser and navigate to http://%s:%s", Host, Port)
 	err := http.ListenAndServe(Host+":"+Port, nil)
 	if err != nil {
 		log.Fatal("Error Starting the HTTP Server :", err)
