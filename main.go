@@ -55,7 +55,7 @@ const ErrorTemplate = `
 <!DOCTYPE html>
 <h3>
     <p><b>emailSigGenerator.yaml did not exist. 
-	I have graciuosly thought of this and created a sample for you. 
+	I have graciously thought of this and created a sample for you. 
 	Please fill it out and reload this page</b></p>
 <h3>
 `
