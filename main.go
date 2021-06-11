@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type User struct {
+type EmailSigData struct {
 	Name        string `yaml:"Name"`
 	Title       string `yaml:"Title"`
 	Phone       string `yaml:"Phone"`
@@ -90,7 +90,7 @@ func createInputYaml() {
 	}
 }
 
-func (u *User) getUserFromYaml() *User {
+func (u *EmailSigData) getUserFromYaml() *EmailSigData {
 	_, err := os.Stat("./emailSigGenerator.yaml")
 	if os.IsNotExist(err) {
 		createInputYaml()
@@ -119,10 +119,10 @@ func getTemplate() string {
 }
 
 func renderTemplate(w http.ResponseWriter, r *http.Request) {
-	var user User
-	user.getUserFromYaml()
+	var data EmailSigData
+	data.getUserFromYaml()
 	parsedTemplate, _ := template.New("SignatureTemplate").Parse(getTemplate())
-	err := parsedTemplate.Execute(w, user)
+	err := parsedTemplate.Execute(w, data)
 	if err != nil {
 		log.Println("Error executing template :", err)
 		return
