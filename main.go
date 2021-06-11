@@ -90,7 +90,7 @@ func createInputYaml() {
 	}
 }
 
-func (u *EmailSigData) getUserFromYaml() *EmailSigData {
+func (e *EmailSigData) getUserFromYaml() *EmailSigData {
 	_, err := os.Stat("./emailSigGenerator.yaml")
 	if os.IsNotExist(err) {
 		createInputYaml()
@@ -102,12 +102,12 @@ func (u *EmailSigData) getUserFromYaml() *EmailSigData {
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}
-	err = yaml.Unmarshal(yamlFile, u)
+	err = yaml.Unmarshal(yamlFile, e)
 	if err != nil {
 		log.Fatalf("Unmarshal: %v", err)
 	}
 
-	return u
+	return e
 }
 
 func getTemplate() string {
