@@ -2,7 +2,7 @@
 Name: "First Last"
 Title: "Your Title"
 Phone: "555-555-5555"
-Logo: "Publicly available url to your logo Ex: https://tensure.io/icons/icon-144x144.png?v=669fd962b090ca24382d97e5c236b611"
+LogoURL: "Publicly available url to your logo Ex: https://tensure.io/icons/icon-144x144.png?v=669fd962b090ca24382d97e5c236b611"
 CompanyName: "Your Company"
 CompanyURL: "URL for your company Ex: https://tensure.io"
 
