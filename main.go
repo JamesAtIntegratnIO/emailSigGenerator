@@ -6,7 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
+	"os/exec"
+	"runtime"
 
 	"gopkg.in/yaml.v2"
 )
@@ -15,24 +16,17 @@ type EmailSigData struct {
 	Name        string `yaml:"Name"`
 	Title       string `yaml:"Title"`
 	Phone       string `yaml:"Phone"`
-	Logo        string `yaml:"Logo"`
+	LogoURL     string `yaml:"LogoURL"`
 	CompanyName string `yaml:"CompanyName"`
 	CompanyURL  string `yaml:"CompanyURL"`
 }
-
-const (
-	Host = "localhost"
-	Port = "8181"
-)
-
-var FileExists = false
 
 const SignatureTemplate = `
 <!DOCTYPE html>
 <table>
     <tbody>
         <tr>
-            <td><img src={{.Logo}}>
+            <td><img src={{.LogoURL}}>
             </td>
             <td></td>
             <td></td>
@@ -51,53 +45,70 @@ const SignatureTemplate = `
 </table>
 `
 
-const ErrorTemplate = `
-<!DOCTYPE html>
-<h3>
-    <p><b>emailSigGenerator.yaml did not exist. 
-	I have graciously thought of this and created a sample for you. 
-	Please fill it out and reload this page</b></p>
-<h3>
+const FormTemplate = `
+<h1>Email Signature Generator</h1>
+<form method="POST">
+	<label>Name:</label><br />
+	<input type="text" name="Name"><br />
+	<label>Title:</label><br />
+	<input type="text" name="Title"><br />
+	<label>Phone:</label><br />
+	<input type="text" name="Phone"><br />
+	<label>Logo URL:</label><br />
+	<input type="text" name="LogoURL"><br />
+	<label>Company Name:</label><br />
+	<input type="text" name="CompanyName"><br />
+	<label>Company URL:</label><br />
+	<input type="text" name="CompanyURL"><br />
+	<input type="submit">
+</form>
+`
+const WelcomeMesage = `
+  If your browser failed to open:
+  Open your browser and navigate to http://localhost:8181
 `
 
-const SampleYaml = `
-Name: "First Last"
-Title: "Your Title"
-Phone: "555-555-5555"
-Logo: "Publicly available url to your logo Ex: https://tensure.io/icons/icon-144x144.png?v=669fd962b090ca24382d97e5c236b611"
-CompanyName: "Your Company"
-CompanyURL: "URL for your company Ex: https://tensure.io"
-
+const Buttons = `
+<html>
+	<head>
+		<title>Email Signature Generator</title>
+	</head>
+	<body>
+		<h1>Email Signature Generator</h1>
+		<button onclick="window.location.href='http://localhost:8181/generate';">
+		Generate From Yaml
+		</button>
+		<button onclick="window.location.href='http://localhost:8181/form';">
+		Generate From From
+		</button>
+	</body>
+</html>
 `
 
-func createInputYaml() {
-	f, err := os.Create("./emailSigGenerator.yaml")
-	if err != nil {
-		fmt.Println(err)
-		return
+func getNewTemplate(templateName string) template.Template {
+	tmpl := template.Must(template.New("Template").Parse(templateName))
+	return *tmpl
+}
+
+func openbrowser(url string) {
+	var err error
+
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
 	}
-	l, err := f.WriteString(SampleYaml)
 	if err != nil {
-		fmt.Println(err)
-		f.Close()
-		return
-	}
-	fmt.Println(l, "bytes written successfully")
-	err = f.Close()
-	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatal(err)
 	}
 }
 
-func (e *EmailSigData) getUserFromYaml() *EmailSigData {
-	_, err := os.Stat("./emailSigGenerator.yaml")
-	if os.IsNotExist(err) {
-		createInputYaml()
-		FileExists = false
-	} else {
-		FileExists = true
-	}
+func (e *EmailSigData) getSigDataFromYaml() *EmailSigData {
 	yamlFile, err := ioutil.ReadFile("./emailSigGenerator.yaml")
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
@@ -106,35 +117,56 @@ func (e *EmailSigData) getUserFromYaml() *EmailSigData {
 	if err != nil {
 		log.Fatalf("Unmarshal: %v", err)
 	}
-
 	return e
 }
 
-func getTemplate() string {
-	if FileExists {
-		return SignatureTemplate
-	} else {
-		return ErrorTemplate
-	}
+func home(w http.ResponseWriter, r *http.Request) {
+	tmpl := getNewTemplate(Buttons)
+	tmpl.Execute(w, nil)
 }
 
 func renderTemplate(w http.ResponseWriter, r *http.Request) {
 	var data EmailSigData
-	data.getUserFromYaml()
-	parsedTemplate, _ := template.New("SignatureTemplate").Parse(getTemplate())
-	err := parsedTemplate.Execute(w, data)
+	data.getSigDataFromYaml()
+	tmpl := getNewTemplate(SignatureTemplate)
+	err := tmpl.Execute(w, data)
 	if err != nil {
 		log.Println("Error executing template :", err)
 		return
 	}
 }
 
+func formFlow(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		tmpl := getNewTemplate(FormTemplate)
+		tmpl.Execute(w, nil)
+		return
+	}
+	formData := EmailSigData{
+		Name:        r.FormValue("Name"),
+		Title:       r.FormValue("Title"),
+		Phone:       r.FormValue("Phone"),
+		LogoURL:     r.FormValue("LogoURL"),
+		CompanyName: r.FormValue("CompanyName"),
+		CompanyURL:  r.FormValue("CompanyURL"),
+	}
+	tmpl := getNewTemplate(SignatureTemplate)
+	tmpl.Execute(w, formData)
+}
+
 func main() {
-	http.HandleFunc("/", renderTemplate)
-	log.Printf("Open your browser and navigate to http://%s:%s", Host, Port)
-	err := http.ListenAndServe(Host+":"+Port, nil)
+	http.HandleFunc("/", home)
+	http.HandleFunc("/generate", renderTemplate)
+	http.HandleFunc("/form", formFlow)
+	log.Println(WelcomeMesage)
+	err := http.ListenAndServe("localhost:8181", nil)
 	if err != nil {
 		log.Fatal("Error Starting the HTTP Server :", err)
 		return
 	}
+}
+
+func init() {
+	openbrowser("http://localhost:8181")
 }
