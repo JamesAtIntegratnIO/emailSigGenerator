@@ -1,6 +1,8 @@
 # Email Signature Generator
 
 This is a quick tool I built that will generate a email signature based on input of a yaml file.
+
+![sample image](./assets/sample.png?raw=true)
 ## Usage
 
 ### From the Binary
